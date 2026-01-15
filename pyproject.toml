@@ -1,0 +1,32 @@
+[project]
+name = "p-tuning-v2-2-1k"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.8.*"
+dependencies = [
+    "datasets==1.15.1",
+    "numpy==1.19.2",
+    "seqeval==1.2.2",
+    "torch~=1.7.1",
+    "torchaudio~=0.7.2",
+    "torchvision~=0.8.2",
+    "tqdm==4.62.3",
+    "transformers==4.11.3",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+torchvision = [
+    { index = "pytorch-cpu" },
+]
+torchaudio = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
