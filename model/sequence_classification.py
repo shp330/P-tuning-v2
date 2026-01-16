@@ -246,7 +246,7 @@ class BertPromptForSequenceClassification(BertPreTrainedModel):
         token_type_ids=None,
         position_ids=None,
         head_mask=None,
-        inputs_embeds=None,
+        prompt_inputs_embeds=None,
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -261,7 +261,7 @@ class BertPromptForSequenceClassification(BertPreTrainedModel):
             token_type_ids=token_type_ids,
         )
         prompts = self.get_prompt(batch_size=batch_size)
-        inputs_embeds = torch.cat((prompts, raw_embedding), dim=1)
+        prompt_inputs_embeds = torch.cat((prompts, raw_embedding), dim=1)
         prefix_attention_mask = torch.ones(batch_size, self.pre_seq_len).to(self.bert.device)
         attention_mask = torch.cat((prefix_attention_mask, attention_mask), dim=1)
 
@@ -271,7 +271,7 @@ class BertPromptForSequenceClassification(BertPreTrainedModel):
             # token_type_ids=token_type_ids,
             # position_ids=position_ids,
             head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
+            inputs_embeds=prompt_inputs_embeds,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
