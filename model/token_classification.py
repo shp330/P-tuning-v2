@@ -40,7 +40,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         total_param = all_param - bert_param
         print('total param is {}'.format(total_param))
 
-    
+
     def forward(
         self,
         input_ids=None,
@@ -105,6 +105,13 @@ class BertForTokenClassification(BertPreTrainedModel):
 
 
 class BertPrefixForTokenClassification(BertPreTrainedModel):
+    """
+    Attributes:
+        n_embd (int): 每个注意力头的嵌入长度
+    """
+    n_embd: int
+    def __init__(self, config):
+        super(BertPrefixForTokenClassification, self).__init__(config)
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -118,15 +125,16 @@ class BertPrefixForTokenClassification(BertPreTrainedModel):
 
         for param in self.bert.parameters():
             param.requires_grad = False
-        
+
         self.pre_seq_len = config.pre_seq_len
         self.n_layer = config.num_hidden_layers
         self.n_head = config.num_attention_heads
+        # 多个注意力头按嵌入维度切分
         self.n_embd = config.hidden_size // config.num_attention_heads
 
         self.prefix_tokens = torch.arange(self.pre_seq_len).long()
         self.prefix_encoder = PrefixEncoder(config)
- 
+
 
         bert_param = 0
         for name, param in self.bert.named_parameters():
@@ -134,9 +142,10 @@ class BertPrefixForTokenClassification(BertPreTrainedModel):
         all_param = 0
         for name, param in self.named_parameters():
             all_param += param.numel()
+        # 前缀模块的总参数
         total_param = all_param - bert_param
         print('total param is {}'.format(total_param)) # 9860105
-    
+
     def get_prompt(self, batch_size):
         prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1).to(self.bert.device)
         past_key_values = self.prefix_encoder(prefix_tokens)
@@ -144,11 +153,26 @@ class BertPrefixForTokenClassification(BertPreTrainedModel):
         past_key_values = past_key_values.view(
             batch_size,
             self.pre_seq_len,
-            self.n_layer * 2, 
+            self.n_layer * 2,
             self.n_head,
             self.n_embd
         )
         past_key_values = self.dropout(past_key_values)
+
+        # [n_layer * 2, batch_size, n_head, pre_seq_len, n_embd]
+        #
+        # /n_layer * 2：x[i] 除以 /n_layer * 2 后，该维度的每个元素都是某一层的 key 或 value：
+        #               i = 0 → 第 0 层的 key
+        #               i = 1 → 第 0 层的 value
+        #               i = 2 → 第 1 层的 key
+        #               i = 3 → 第 1 层的 value
+        # /batch_size：x[i, j]  再除以 /batch_size 后，该维度的每个元素都是同一个样本的数据
+        # /n_head：x[i, j, k] 该维度的每个元素都是同一注意力头的数据
+        # /pre_seq_len：x[i, j, k, l] 该维度的每个元素都是同一样本序列的某个 token 的数据
+        # /n_embd：x[i, j, k, l, m] 该维度的每个元素是某个 token 的某一维的特征数据
+        #
+        # .split(2): 在第 0 维，每 2 个元素切一片，即，将同一层的 key 和 value 切成一片。
+        # 结果为：长度为 n_layer 的 Tensor 元组，每个 Tensor 的形状为 [2, batch_size, n_head, pre_seq_len, n_embd]
         past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
         return past_key_values
 
@@ -229,7 +253,7 @@ class RobertaPrefixForTokenClassification(RobertaPreTrainedModel):
 
         for param in self.roberta.parameters():
             param.requires_grad = False
-        
+
         self.pre_seq_len = config.pre_seq_len
         self.n_layer = config.num_hidden_layers
         self.n_head = config.num_attention_heads
@@ -247,14 +271,14 @@ class RobertaPrefixForTokenClassification(RobertaPreTrainedModel):
         total_param = all_param - bert_param
         print('total param is {}'.format(total_param)) # 9860105
 
-    
+
     def get_prompt(self, batch_size):
         prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1).to(self.roberta.device)
         past_key_values = self.prefix_encoder(prefix_tokens)
         past_key_values = past_key_values.view(
             batch_size,
             self.pre_seq_len,
-            self.n_layer * 2, 
+            self.n_layer * 2,
             self.n_head,
             self.n_embd
         )
@@ -337,7 +361,7 @@ class DebertaPrefixForTokenClassification(DebertaPreTrainedModel):
 
         for param in self.deberta.parameters():
             param.requires_grad = False
-        
+
         self.pre_seq_len = config.pre_seq_len
         self.n_layer = config.num_hidden_layers
         self.n_head = config.num_attention_heads
@@ -354,7 +378,7 @@ class DebertaPrefixForTokenClassification(DebertaPreTrainedModel):
             all_param += param.numel()
         total_param = all_param - deberta_param
         print('total param is {}'.format(total_param)) # 9860105
-    
+
     def get_prompt(self, batch_size):
         prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1).to(self.deberta.device)
         past_key_values = self.prefix_encoder(prefix_tokens)
@@ -362,7 +386,7 @@ class DebertaPrefixForTokenClassification(DebertaPreTrainedModel):
         past_key_values = past_key_values.view(
             batch_size,
             self.pre_seq_len,
-            self.n_layer * 2, 
+            self.n_layer * 2,
             self.n_head,
             self.n_embd
         )
@@ -444,7 +468,7 @@ class DebertaV2PrefixForTokenClassification(DebertaV2PreTrainedModel):
 
         for param in self.deberta.parameters():
             param.requires_grad = False
-        
+
         self.pre_seq_len = config.pre_seq_len
         self.n_layer = config.num_hidden_layers
         self.n_head = config.num_attention_heads
@@ -461,14 +485,14 @@ class DebertaV2PrefixForTokenClassification(DebertaV2PreTrainedModel):
             all_param += param.numel()
         total_param = all_param - deberta_param
         print('total param is {}'.format(total_param)) # 9860105
-    
+
     def get_prompt(self, batch_size):
         prefix_tokens = self.prefix_tokens.unsqueeze(0).expand(batch_size, -1).to(self.deberta.device)
         past_key_values = self.prefix_encoder(prefix_tokens)
         past_key_values = past_key_values.view(
             batch_size,
             self.pre_seq_len,
-            self.n_layer * 2, 
+            self.n_layer * 2,
             self.n_head,
             self.n_embd
         )

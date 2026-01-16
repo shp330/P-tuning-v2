@@ -11,7 +11,7 @@ class PrefixEncoder(torch.nn.Module):
     '''
     def __init__(self, config):
         super().__init__()
-        self.prefix_projection = config.prefix_projection
+        self.prefix_projection: bool = config.prefix_projection
         if self.prefix_projection:
             # Use a two-layer MLP to encode the prefix
             self.embedding = torch.nn.Embedding(config.pre_seq_len, config.hidden_size)
