@@ -43,8 +43,11 @@ class QuestionAnsweringTrainer(ExponentialTrainer):
         eval_examples = self.eval_examples if eval_examples is None else eval_examples
 
         # Temporarily disable metric computation, we will do it in the loop here.
+        # 临时禁用指标计算与: 避免评估循环内置的自动指标计算，改为手动精准计算：
         compute_metrics = self.compute_metrics
         self.compute_metrics = None
+        # 根据配置self.args.use_legacy_prediction_loop选择循环方法：旧版 prediction_loop 或新版 evaluation_loop，
+        #   两个循环均用于遍历数据并执行模型前向传播，获取评估结果。
         eval_loop = self.prediction_loop if self.args.use_legacy_prediction_loop else self.evaluation_loop
         try:
             output = eval_loop(
