@@ -472,7 +472,7 @@ class ExponentialTrainer(BaseTrainer):
             # 调用轮开始回调函数 on_epoch_begin
             self.control = self.callback_handler.on_epoch_begin(args, self.state, self.control)
 
-            step = -1
+            step = -1 # DIFF ADD
             # 批次循环（内循环）：迭代当前轮的所有训练批次
             for step, inputs in enumerate(epoch_iterator):
                 # (1) 跳过已训练批次（断点续训）
@@ -584,7 +584,7 @@ class ExponentialTrainer(BaseTrainer):
                         self.optimizer.step()
 
                     # 学习率调度器更新: 只在 epoch 结束时更新 LR scheduler！
-                    if optimizer_was_run and not self.deepspeed and (step + 1) == steps_in_epoch:
+                    if optimizer_was_run and not self.deepspeed and (step + 1) == steps_in_epoch: # DIFF Add condition: and (step + 1) == steps_in_epoch
                         self.lr_scheduler.step()
 
                     # 梯度清零：梯度清零，准备下一批次训练
@@ -602,13 +602,13 @@ class ExponentialTrainer(BaseTrainer):
 
                 if self.control.should_epoch_stop or self.control.should_training_stop:
                     break
-            if step < 0:
+            if step < 0: # DIFF BEGIN: FROM transformers.train()
                 logger.warning(
                     f"There seems to be not a single sample in your epoch_iterator, stopping training at step"
                     f" {self.state.global_step}! This is expected if you're using an IterableDataset and set"
                     f" num_steps ({max_steps}) higher than the number of available samples."
                 )
-                self.control.should_training_stop = True
+                self.control.should_training_stop = True # DIFF END
             # 6. 轮数结束处理
             self.control = self.callback_handler.on_epoch_end(args, self.state, self.control)
             self._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
